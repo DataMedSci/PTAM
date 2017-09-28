@@ -1,0 +1,17 @@
+# before committing check this file here: https://lint.travis-ci.org/
+language: python
+
+# travis-ci runs by default on ancient Ubuntu 12.04 (precise)
+# following options will give us Ubuntu 14.04 (trusty)
+sudo: false
+dist: trusty
+
+# install packages from requirement.txt and other stuff
+install:
+  - pip install nbval
+
+# finally run tox tests
+script:
+  - py.test --nbval
+  - py.test --nbval-lax
+
