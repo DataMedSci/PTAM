@@ -11,9 +11,10 @@ dist: trusty
 
 # install packages from requirement.txt and other stuff
 install:
+  - pip install -r requirements.txt
   - pip install nbval
 
-# finally run tox tests
+# finally run tests
 script:
   - py.test --nbval
   - py.test --nbval-lax
