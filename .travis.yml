@@ -16,6 +16,6 @@ install:
 
 # finally run tests
 script:
-  - py.test --nbval
-  - py.test --nbval-lax
+  - py.test --nbval --sanitize-with .doc_sanitize.cfg
+  - py.test --nbval-lax --sanitize-with .doc_sanitize.cfg
 
