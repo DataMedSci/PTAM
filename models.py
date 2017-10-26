@@ -1,12 +1,11 @@
-# first some necessary python imports
 import numpy as np
-import mpmath as mp # its part of sympy, offers high-precition floating-point arithmetic
-import matplotlib
-import matplotlib.pyplot as plt
+import mpmath as mp  # its part of sympy, offers high-precision floating-point arithmetic
 
 
 class ERSCalc(object):
-    """A 'calculator' class for stopping power and range of protons"""
+    """
+    A 'calculator' class for stopping power and range of protons
+    """
     alpha_cm_MeV = 0.0022
     p = 1.77
 
@@ -15,10 +14,6 @@ class ERSCalc(object):
         """
         Bragg-Kleeman rule for energy-range relationship
         Equation (8) in [1]
-
-        Example usage:
-        >>> ERSCalc.range_cm(100.0)
-        1.0
         """
         return cls.alpha_cm_MeV * energy_MeV ** cls.p
 
@@ -29,6 +24,11 @@ class ERSCalc(object):
 
 
 class WilkensLET(object):
+    """
+    Analytical LET model implementation following
+    [1] Wilkens JJ, Oelfke U. "Analytical linear energy transfer calculations for proton therapy"
+    Med Phys. 2003 May;30(5):806-15. (DOI: 10.1118/1.1567852)
+    """
     r_cm = 2e-4  # 2 um regularisation
 
     @staticmethod
@@ -47,18 +47,22 @@ class WilkensLET(object):
 
     @classmethod
     def d_tilde(cls, nu, xi, zeta):
-        """helper function, equation (10) in [1]"""
+        """helper function defined by equation (10) in [1]"""
         part1 = cls.parabolic_integral(nu, xi)
         part2 = cls.parabolic_integral(nu, zeta)
         return part1 - part2
 
     @classmethod
-    def let_d_MeV_cm(cls, energy_MeV, sigma_energy_MeV, z_cm):
-        """TODO
+    def szx(cls, energy_MeV, sigma_energy_MeV, z_cm):
         """
-        # range and residual range
+        calculates tuple sigma_cm, zeta, xi where
+          - sigma_cm is total sigma, defined by equation (A3) in [1]
+          - xi is a variable introduced for equation (A11) in [1]
+          - zeta is a variable introduced for equation (A8) in [1]
+        """
+
+        # range
         range_cm = ERSCalc.range_cm(energy_MeV)
-        res_range_cm = range_cm - z_cm
 
         # range straggling of monoenergetical protons, see Appendix [1]
         sigma_mono_cm = 0.012 * range_cm ** 0.935
@@ -78,6 +82,14 @@ class WilkensLET(object):
         # xi variable introduced for equation (A11) in [1]
         xi = (z_cm - range_cm - cls.r_cm) / sigma_cm
 
+        return sigma_cm, zeta, xi
+
+    @classmethod
+    def let_d_MeV_cm(cls, energy_MeV, sigma_energy_MeV, z_cm):
+        """dose averaged LET in [MeV/cm]
+        """
+        sigma_cm, zeta, xi = cls.szx(energy_MeV, sigma_energy_MeV, z_cm)
+
         # main part of <S>_z as in quation (10) or (A12) in [1]
         q = 1.0 + 1.0 / ERSCalc.p
         mean_s_z_part = (sigma_cm ** q) * float(mp.gamma(q)) * cls.d_tilde(q, xi, zeta)
@@ -95,35 +107,16 @@ class WilkensLET(object):
         result = const_factor_MeV_cm * mean_s2_z_part / mean_s_z_part
 
         # filling nonsense values (outside model domain) with np.nan
-        result[res_range_cm < 0] = np.nan
+        # zeta > 0 is equivalent to z_cm > r_cm (points behind the range)
+        result[zeta > 0] = np.nan
 
         return result
 
     @classmethod
     def let_t_MeV_cm(cls, energy_MeV, sigma_energy_MeV, z_cm):
-        """TODO
+        """track averaged LET
         """
-        # range and residual range
-        range_cm = ERSCalc.range_cm(energy_MeV)
-        res_range_cm = range_cm - z_cm
-
-        # range straggling of monoenergetical protons, see Appendix [1]
-        sigma_mono_cm = 0.012 * range_cm ** 0.935
-
-        # range equivalent of energy straggling, equation (A2) in [1]
-        sigma_r_cm = sigma_energy_MeV
-        sigma_r_cm *= ERSCalc.alpha_cm_MeV
-        sigma_r_cm *= ERSCalc.p
-        sigma_r_cm *= (energy_MeV ** (ERSCalc.p - 1.0))
-
-        # total sigma, equation (A3) in [1]
-        sigma_cm = (sigma_mono_cm ** 2 + sigma_r_cm ** 2) ** 0.5
-
-        # zeta variable introduced for equation (A8) in [1]
-        zeta = (z_cm - range_cm) / sigma_cm
-
-        # xi variable introduced for equation (A11) in [1]
-        xi = (z_cm - range_cm - cls.r_cm) / sigma_cm
+        sigma_cm, zeta, xi = cls.szx(energy_MeV, sigma_energy_MeV, z_cm)
 
         # main part of <S>_z as in equation (10) or (A12) in [1]
         q = 1.0 + 1.0 / ERSCalc.p
@@ -140,6 +133,17 @@ class WilkensLET(object):
         result = const_factor_MeV_cm * mean_s_z_part / q_z_part
 
         # filling nonsense values (outside model domain) with np.nan
-        result[res_range_cm < 0] = np.nan
+        # zeta > 0 is equivalent to z_cm > r_cm (points behind the range)
+        result[zeta > 0] = np.nan
 
         return result
+
+    @classmethod
+    def let_d_keV_um(cls, energy_MeV, sigma_energy_MeV, z_cm):
+        """dose averaged LET in [keV/um]"""
+        return cls.let_d_MeV_cm(energy_MeV, sigma_energy_MeV, z_cm) * 0.1
+
+    @classmethod
+    def let_t_keV_um(cls, energy_MeV, sigma_energy_MeV, z_cm):
+        """track averaged LET in [keV/um]"""
+        return cls.let_t_MeV_cm(energy_MeV, sigma_energy_MeV, z_cm) * 0.1
