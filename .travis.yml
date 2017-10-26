@@ -3,6 +3,7 @@ language: python
 
 python:
   - 3.6
+#  - 2.7  # TODO enable in the future, right now python3 version is hardcoded in the jupyter notebook file
 
 # travis-ci runs by default on ancient Ubuntu 12.04 (precise)
 # following options will give us Ubuntu 14.04 (trusty)
@@ -12,10 +13,10 @@ dist: trusty
 # install packages from requirement.txt and other stuff
 install:
   - pip install -r requirements.txt
-  - pip install nbval
+  - pip install nbval flake8
 
 # finally run tests
 script:
   - py.test --nbval --sanitize-with .doc_sanitize.cfg
   - py.test --nbval-lax --sanitize-with .doc_sanitize.cfg
-
+  - flake8 .
