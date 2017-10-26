@@ -29,7 +29,7 @@ class ERSCalc(object):
 
 
 class WilkensLET(object):
-    R_cm = 2e-4  # 2 um regularisation
+    r_cm = 2e-4  # 2 um regularisation
 
     @staticmethod
     def parabolic_integral(nu, t):
@@ -76,23 +76,68 @@ class WilkensLET(object):
         zeta = (z_cm - range_cm) / sigma_cm
 
         # xi variable introduced for equation (A11) in [1]
-        xi = (z_cm - range_cm - cls.R_cm) / sigma_cm
+        xi = (z_cm - range_cm - cls.r_cm) / sigma_cm
 
         # main part of <S>_z as in quation (10) or (A12) in [1]
         q = 1.0 + 1.0 / ERSCalc.p
-        mean_S_z_part = (sigma_cm ** q) * float(mp.gamma(q)) * cls.d_tilde(q, xi, zeta)
-        mean_S_z_part -= cls.R_cm * ((0.5 * cls.R_cm) ** (1.0 / ERSCalc.p)) * cls.exponent_square(zeta, xi)
+        mean_s_z_part = (sigma_cm ** q) * float(mp.gamma(q)) * cls.d_tilde(q, xi, zeta)
+        mean_s_z_part -= cls.r_cm * ((0.5 * cls.r_cm) ** (1.0 / ERSCalc.p)) * cls.exponent_square(zeta, xi)
 
         # main part of <S2>_z as in quation (10) or (A14) in [1]
         r = 2.0 / ERSCalc.p
-        mean_S2_z_part = (sigma_cm ** r) * float(mp.gamma(r)) * cls.d_tilde(r, xi, zeta)
-        mean_S2_z_part -= 2.0 * ((0.5 * cls.R_cm) ** r) * cls.exponent_square(zeta, xi)
+        mean_s2_z_part = (sigma_cm ** r) * float(mp.gamma(r)) * cls.d_tilde(r, xi, zeta)
+        mean_s2_z_part -= 2.0 * ((0.5 * cls.r_cm) ** r) * cls.exponent_square(zeta, xi)
 
         # factor part of <S2>_z divided by <S>_z
         const_factor_MeV_cm = 1.0 / (ERSCalc.p * (2.0 - ERSCalc.p) * ERSCalc.alpha_cm_MeV ** (1.0 / ERSCalc.p))
 
         # result
-        result = const_factor_MeV_cm * mean_S2_z_part / mean_S_z_part
+        result = const_factor_MeV_cm * mean_s2_z_part / mean_s_z_part
+
+        # filling nonsense values (outside model domain) with np.nan
+        result[res_range_cm < 0] = np.nan
+
+        return result
+
+    @classmethod
+    def let_t_MeV_cm(cls, energy_MeV, sigma_energy_MeV, z_cm):
+        """TODO
+        """
+        # range and residual range
+        range_cm = ERSCalc.range_cm(energy_MeV)
+        res_range_cm = range_cm - z_cm
+
+        # range straggling of monoenergetical protons, see Appendix [1]
+        sigma_mono_cm = 0.012 * range_cm ** 0.935
+
+        # range equivalent of energy straggling, equation (A2) in [1]
+        sigma_r_cm = sigma_energy_MeV
+        sigma_r_cm *= ERSCalc.alpha_cm_MeV
+        sigma_r_cm *= ERSCalc.p
+        sigma_r_cm *= (energy_MeV ** (ERSCalc.p - 1.0))
+
+        # total sigma, equation (A3) in [1]
+        sigma_cm = (sigma_mono_cm ** 2 + sigma_r_cm ** 2) ** 0.5
+
+        # zeta variable introduced for equation (A8) in [1]
+        zeta = (z_cm - range_cm) / sigma_cm
+
+        # xi variable introduced for equation (A11) in [1]
+        xi = (z_cm - range_cm - cls.r_cm) / sigma_cm
+
+        # main part of <S>_z as in equation (10) or (A12) in [1]
+        q = 1.0 + 1.0 / ERSCalc.p
+        mean_s_z_part = (sigma_cm ** q) * float(mp.gamma(q)) * cls.d_tilde(q, xi, zeta)
+        mean_s_z_part -= cls.r_cm * ((0.5 * cls.r_cm) ** (1.0 / ERSCalc.p)) * cls.exponent_square(zeta, xi)
+
+        # main part of Q_z as in equation (10) or (A8) in [1]
+        q_z_part = cls.parabolic_integral(1, zeta)
+
+        # factor part of <S2>_z divided by <S>_z
+        const_factor_MeV_cm = 1.0 / (sigma_cm * cls.r_cm * ERSCalc.alpha_cm_MeV ** (1.0 / ERSCalc.p))
+
+        # result
+        result = const_factor_MeV_cm * mean_s_z_part / q_z_part
 
         # filling nonsense values (outside model domain) with np.nan
         result[res_range_cm < 0] = np.nan
