@@ -15,6 +15,6 @@ install:
 
 # finally run tests
 script:
+  - flake8 .
   - py.test --nbval --sanitize-with .doc_sanitize.cfg
   - py.test --nbval-lax --sanitize-with .doc_sanitize.cfg
-  - flake8 .

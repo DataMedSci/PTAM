@@ -29,7 +29,7 @@ class ERSCalc(object):
         """
         Bortfeld approximation for stopping power of protons
         """
-        return (resid_range_cm ** (1.0 / cls.p - 1.0)) / cls.p_alpha_cm_MeV
+        return (resid_range_cm ** (1.0 / cls.p - 1.0)) / cls.p_alpha_cm_MeV()
 
 
 class ExactSpecialFunction(object):
