@@ -103,7 +103,7 @@ class BortfeldModel(GeneralModel):
 
     gamma = 0.6
 
-    def dose_MeV_g(self, fluence_cm2, eps=0.1):
+    def dose_MeV_g(self, fluence_cm2, eps=0.03):
         """dose in [MeV/g]"""
 
         A = self.sigma_cm ** (1.0 / ERSCalc.p)
