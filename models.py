@@ -128,7 +128,7 @@ class BortfeldModel(GeneralModel):
     def dose_Gy(cls, fluence_cm2, energy_MeV, sigma_energy_MeV, z_cm, eps=0.1):
         """dose in [Gy]"""
 
-        model = BortfeldDose(energy_MeV, sigma_energy_MeV, z_cm)
+        model = BortfeldModel(energy_MeV, sigma_energy_MeV, z_cm)
 
         dose_MeV_g = model.dose_MeV_g(fluence_cm2, eps)
 
@@ -161,7 +161,7 @@ class WilkensModel(GeneralModel):
 
         # main part of <S2>_z as in quation (10) or (A14) in [1]
         r = 2.0 / ERSCalc.p
-        mean_s2_z_part = (self.sigma_cm ** r) * float(mp.gamma(r)) * self.d_tilde(r)
+        mean_s2_z_part = (self.sigma_cm ** r) * float(mp.gamma(r)) * self._d_tilde(r)
         mean_s2_z_part -= 2.0 * ((0.5 * self.r_cm) ** r) * ExactSpecialFunction.exponent_square(self.zeta, self.xi)
 
         # factor part of <S2>_z divided by <S>_z
@@ -207,7 +207,7 @@ class WilkensModel(GeneralModel):
         """
         dose averaged LET in [keV/um]
         """
-        model = WilkensLET(energy_MeV, sigma_energy_MeV, z_cm)
+        model = WilkensModel(energy_MeV, sigma_energy_MeV, z_cm)
         return model.let_d_MeV_cm() * 0.1
 
     @classmethod
@@ -215,5 +215,5 @@ class WilkensModel(GeneralModel):
         """
         track averaged LET in [keV/um]
         """
-        model = WilkensLET(energy_MeV, sigma_energy_MeV, z_cm)
+        model = WilkensModel(energy_MeV, sigma_energy_MeV, z_cm)
         return model.let_t_MeV_cm() * 0.1
